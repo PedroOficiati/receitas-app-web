@@ -1,60 +1,114 @@
+import { useState } from "react";
 import Link from "next/link";
-import Head from "next/head";
 
-export default function Home() {
+export default function Home({ receitasPorLetra }) {
+  const [letraSelecionada, setLetraSelecionada] = useState("a");
+  const [busca, setBusca] = useState("");
+
+  const receitas =
+    receitasPorLetra.find((r) => r.letra === letraSelecionada)?.receitas || [];
+
+  const resultados = busca
+    ? receitas.filter((r) =>
+        r.strMeal.toLowerCase().includes(busca.toLowerCase())
+      )
+    : receitas;
+
   return (
-    <>
-      <Head>
-        <title>Site de Receitas</title>
-        <link rel="stylesheet" href="/style.css" />
-      </Head>
+    <article style={{ padding: "20px", fontFamily: "Arial" }}>
+      <header style={{ textAlign: "center", marginBottom: "20px" }}>
+        <img src="/logo.jpeg" alt="Logo" className="logo" />
+        <h1>SITE DE RECEITAS</h1>
+        <p>Busque sua receita favorita ou escolha uma letra</p>
+      </header>
 
-      <main className="container">
-        <header className="header">
-          <img src="logo.jpeg" alt="logo" />
-          <h1>SITE DE RECEITAS</h1>
-          <p>SELECIONE A LETRA INICIAL DA SUA RECEITA:</p>
-          <p className="alfabeto">
-            A-B-C-D-E-F-G-H-I-J-K-L-M-N-O-P-Q-R-S-T-U-V-W-X-Y-Z
-          </p>
-        </header>
+      {/* IMAGEM DESTAQUE */}
+      <img src="/foto1.png" alt="Imagem destaque" className="featured-image" />
 
-        <section className="conteudo">
-          <article className="lista">
-            <h2>RECEITAS COM A LETRA "A"</h2>
-            <ul>
-              <li>
-                <Link href="/receita/1">Arroz à grega</Link>
-              </li>
-              <li>
-                <Link href="/receita/2">Abobrinha recheada</Link>
-              </li>
-              <li>
-                <Link href="/receita/3">Acarajé</Link>
-              </li>
-              <li>
-                <Link href="/receita/4">Açaí na tigela</Link>
-              </li>
-              <li>
-                <Link href="/receita/5">Almôndegas ao molho</Link>
-              </li>
-            </ul>
-          </article>
+      {/* CAMPO DE BUSCA */}
+      <div className="search-bar">
+        <input
+          type="text"
+          placeholder="Buscar receita..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      </div>
 
-          <article className="detalhes">
-            <h2>AÇAÍ NA TIGELA</h2>
-            <img src="acai.jpg" alt="Açaí na tigela" className="foto-receita" />
-            <h3>INSTRUÇÕES:</h3>
-            <p>
-              Para fazer o açaí na tigela, bata a polpa de açaí congelada no
-              liquidificador com banana e, se quiser, adoce com um pouco de
-              xarope de guaraná. Depois, coloque o creme em uma tigela e
-              finalize com granola, fatias de banana e mel por cima. Sirva
-              imediatamente.
-            </p>
-          </article>
-        </section>
-      </main>
-    </>
+      {/* SELETOR DE LETRAS */}
+      <div style={{ textAlign: "center", margin: "20px 0" }}>
+        {["a", "b", "c", "d"].map((letra) => (
+          <button
+            key={letra}
+            onClick={() => {
+              setLetraSelecionada(letra);
+              setBusca(""); // limpa busca ao trocar letra
+            }}
+            style={{
+              margin: "5px",
+              padding: "10px 15px",
+              borderRadius: "8px",
+              border: "none",
+              backgroundColor: letraSelecionada === letra ? "#c4a04d" : "#eee",
+              color: letraSelecionada === letra ? "#fff" : "#333",
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            {letra.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* LISTA DE RECEITAS */}
+      <section>
+        <h2 style={{ marginBottom: "10px" }}>
+          Receitas com a letra "{letraSelecionada.toUpperCase()}"
+        </h2>
+        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+          {resultados.length > 0 ? (
+            resultados.map((r) => (
+              <li key={r.idMeal} style={{ marginBottom: "10px" }}>
+                <Link
+                  href={`/receita/${r.idMeal}`}
+                  style={{
+                    textDecoration: "none",
+                    color: "#4a2600",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {r.strMeal}
+                </Link>
+              </li>
+            ))
+          ) : (
+            <p>Nenhuma receita encontrada.</p>
+          )}
+        </ul>
+      </section>
+    </article>
   );
+}
+
+export async function getStaticProps() {
+  const letras = ["a", "b", "c", "d"];
+
+  const receitasPorLetra = await Promise.all(
+    letras.map(async (letra) => {
+      const res = await fetch(
+        `https://www.themealdb.com/api/json/v1/1/search.php?f=${letra}`
+      );
+      const data = await res.json();
+      return {
+        letra,
+        receitas: data.meals ? data.meals.slice(0, 4) : [],
+      };
+    })
+  );
+
+  return {
+    props: {
+      receitasPorLetra,
+    },
+  };
 }
